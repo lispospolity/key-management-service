@@ -4,7 +4,7 @@ import java.security.Key;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
-public final class KeyEncryptionKey implements Key {
+public final class Kek implements Key {
     private final static SecureRandom secureRandom = new SecureRandom();
 
     private final byte[] key;
@@ -13,12 +13,17 @@ public final class KeyEncryptionKey implements Key {
         return key.clone();
     }
 
-    public KeyEncryptionKey() {
+    private final int version;
+    public int getVersion() { return version; }
+
+    public Kek(int version) {
         key = generateKey();
+        this.version = version;
     }
-    public KeyEncryptionKey(byte[] existingKey) {
+    public Kek(byte[] existingKey, int version) {
         if (existingKey.length != 32) throw new IllegalArgumentException("KEK must be 32 bytes long.");
         this.key = existingKey.clone();
+        this.version = version;
     }
 
     private byte[] generateKey() {
@@ -40,7 +45,7 @@ public final class KeyEncryptionKey implements Key {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof KeyEncryptionKey that)) return false;
+        if (!(o instanceof Kek that)) return false;
         return Arrays.equals(key, that.key);
     }
     @Override

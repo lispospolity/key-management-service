@@ -18,14 +18,14 @@ import java.security.NoSuchAlgorithmException;
 
 @Service
 public class KeyService {
-    private final KeyEncryptionKey kek;
+    private final Kek kek;
 
-    public KeyService(@NotNull KeyEncryptionKey kek) {
+    public KeyService(@NotNull Kek kek) {
         this.kek = kek;
     }
 
-    public Result wrap(String base64UnwrappedDek) {
-        if (base64UnwrappedDek == null || base64UnwrappedDek.isBlank()) {
+    public Result wrap(String base64PlainDek, String keyId) {
+        if (base64PlainDek == null || base64PlainDek.isBlank()) {
             Response response = new ErrorResponse(
                     false,
                     "Provided key cannot be empty."
@@ -40,17 +40,26 @@ public class KeyService {
         } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException ex) {
             return serverError(ex);
         }
-
-        DataEncryptionKey unwrappedDek = new DataEncryptionKey(base64UnwrappedDek);
+        Dek dek;
+        try {
+            dek = new Dek(base64PlainDek);
+        } catch (IllegalArgumentException ex) {
+            Response response = new ErrorResponse(
+                    false,
+                    ex.getMessage()
+            );
+            return new Result(401, response);
+        }
 
         try {
-            byte[] wrapped = wrapper.wrap(unwrappedDek);
+            byte[] wrapped = wrapper.wrap(dek);
 
-            DataEncryptionKey wrappedKey = new DataEncryptionKey(wrapped);
+            Envelope envelope = new Envelope(Envelope.AES_ALGORITHM, kek.getVersion(), wrapped);
 
             Response response = new WrapKeyResponse(
                     true,
-                    wrappedKey.toBase64(),
+                    keyId,
+                    envelope.toBase64(),
                     "Successfully wrapped key."
             );
             return new Result(200, response);
@@ -70,8 +79,8 @@ public class KeyService {
         }
     }
 
-    public Result unwrap(String base64WrappedDek) {
-        if (base64WrappedDek == null || base64WrappedDek.isBlank()) {
+    public Result unwrap(String base64Envelope, String keyId) {
+        if (base64Envelope == null || base64Envelope.isBlank()) {
             Response response = new ErrorResponse(
                     false,
                     "Provided key cannot be empty."
@@ -87,18 +96,28 @@ public class KeyService {
             return serverError(ex);
         }
 
+        Envelope envelope;
         try {
-            DataEncryptionKey wrappedKey = new DataEncryptionKey(base64WrappedDek);
+            envelope = new Envelope(base64Envelope);
+        } catch (IllegalArgumentException ex) {
+            Response response = new ErrorResponse(
+                    false,
+                    ex.getMessage()
+            );
+            return new Result(401, response);
+        }
 
+        try {
             Key key = wrapper.unwrap(
-                    wrappedKey.getEncoded(),
-                    wrappedKey.getAlgorithm(),
+                    envelope.getWrapped(),
+                    envelope.getAlgorithm(),
                     Cipher.SECRET_KEY
             );
-            DataEncryptionKey unwrappedKey = new DataEncryptionKey(key.getEncoded());
+            Dek unwrappedKey = new Dek(key.getEncoded());
 
             Response response = new UnwrapKeyResponse(
                     true,
+                    keyId,
                     unwrappedKey.toBase64(),
                     "Successfully unwrapped key."
             );

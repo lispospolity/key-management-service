@@ -13,27 +13,27 @@ public class KeyTests {
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
 
-        DataEncryptionKey key1 = new DataEncryptionKey(bytes);
+        Dek key1 = new Dek(bytes);
 
-        DataEncryptionKey key2 = new DataEncryptionKey(key1.toBase64());
+        Dek key2 = new Dek(key1.toBase64());
 
         Assertions.assertEquals(key1, key2);
     }
 
     @Test
     void uniqueKEKs() {
-        KeyEncryptionKey key1 = new KeyEncryptionKey();
+        Kek key1 = new Kek(0);
 
-        KeyEncryptionKey key2 = new KeyEncryptionKey();
+        Kek key2 = new Kek(0);
 
         Assertions.assertNotEquals(key1, key2);
     }
 
     @Test
     void KEKRewrite() {
-        KeyEncryptionKey key1 = new KeyEncryptionKey();
+        Kek key1 = new Kek(0);
 
-        KeyEncryptionKey key2 = new KeyEncryptionKey(key1.getEncoded());
+        Kek key2 = new Kek(key1.getEncoded(), key1.getVersion());
 
         Assertions.assertEquals(key1, key2);
     }

@@ -4,6 +4,7 @@ import app.dto.response.Response;
 
 public record UnwrapKeyResponse(
         boolean success,
+        String keyId,
         String unwrappedKeyBase64,
         String message
 ) implements Response {
